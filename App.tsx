@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
@@ -403,25 +402,28 @@ const AIAdvisorPage: React.FC<{ setView: (view: string) => void }> = ({ setView 
         const query = messageText || userInput;
         if (!query.trim() || isLoading) return;
 
-        const newMessages = [...messages, { sender: 'user', text: query }];
+        // FIX: Using 'as const' to ensure the 'sender' property is inferred as a literal type ('user' | 'ai')
+        // instead of a generic 'string', which resolves the type error with `setMessages`.
+        const newMessages = [...messages, { sender: 'user' as const, text: query }];
         setMessages(newMessages);
         setUserInput('');
         setIsLoading(true);
 
         try {
+            // FIX: Per @google/genai guidelines, `contents` should be a simple string when `systemInstruction` is used.
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: [{ role: 'user', parts: [{ text: query }] }],
+                contents: query,
                 config: { systemInstruction: systemInstruction }
             });
 
             const aiResponse = response.text;
-            setMessages([...newMessages, { sender: 'ai', text: aiResponse }]);
+            setMessages([...newMessages, { sender: 'ai' as const, text: aiResponse }]);
 
         } catch (error) {
             console.error("Error calling Gemini API:", error);
             const errorMessage = "Maaf, terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi.";
-            setMessages([...newMessages, { sender: 'ai', text: errorMessage }]);
+            setMessages([...newMessages, { sender: 'ai' as const, text: errorMessage }]);
         } finally {
             setIsLoading(false);
         }
